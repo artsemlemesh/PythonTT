@@ -1,0 +1,78 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email List</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+    <h1>Email Messages</h1>
+
+    <button id="start-import">Start Import</button>
+    
+    <div id="progress-container">
+        <label>Progress: <span id="progress-text">Reading Messages</span></label>
+        <div id="progress-bar">
+            <div id="progress-fill"></div>
+        </div>
+    </div>
+
+    <table id="email-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Subject</th>
+                <th>Sent Date</th>
+                <th>Received Date</th>
+                <th>Body (Preview)</th>
+                <th>Attachments</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for email in emails %}
+            <tr>
+                <td>{{ email.id }}</td>
+                <td>{{ email.subject }}</td>
+                <td>{{ email.sent_date }}</td>
+                <td>{{ email.received_date }}</td>
+                <td>{{ email.body|truncatechars:50 }}</td>
+                <td>
+                    {% if email.attachments %}
+                        {{ email.attachments|join:", " }}
+                    {% else %}
+                        None
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <script>
+        document.getElementById("start-import").onclick = function () {
+            fetch('/emails/import/1/')  // Specify the correct account ID here
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        console.log("Import started.");
+                    } else {
+                        alert(data.message || "Error starting import.");
+                    }
+                });
+        };
+
+        const progressText = document.getElementById("progress-text");
+        const progressBar = document.getElementById("progress-fill");
+
+        const socket = new WebSocket('ws://' + window.location.host + '/ws/email_progress/');
+
+        socket.onmessage = function (event) {
+            const data = JSON.parse(event.data);
+            progressBar.style.width = `${data.progress}%`;
+            progressText.innerText = data.progress >= 100 ? "Emails Loaded" : "Loading...";
+        };
+    </script>
+</body>
+</html>
