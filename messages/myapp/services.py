@@ -5,16 +5,20 @@ from .models import EmailMessage
 class EmailFetcher:
     def __init__(self, account):
         self.account = account
-        self.mail = imaplib.IMAP4_SSL("imap.yandex.ru")  # Configure server as per email provider
+        self.mail = imaplib.IMAP4_SSL("imap.gmail.com")  # Configure server as per email provider
     
     def login(self):
+        print("Logging in...")
         try:
-            self.mail.login(self.account.email, self.account.password)
+            self.mail.login('bublikteam1@gmail.com', 'bzdy wyke ygzy uygm')
+            print("Login successful!")
             return True
-        except imaplib.IMAP4.error:
+        except imaplib.IMAP4.error as e:
+            print("Login failed! Error: {e}")
             return False
     
     def fetch_messages(self):
+        print("Fetching messages...")
         self.mail.select("inbox")
         result, data = self.mail.search(None, "ALL")
         
@@ -25,11 +29,16 @@ class EmailFetcher:
             self.save_email(msg)
         
     def save_email(self, msg):
+        # print('save email',  msg)
         # Extract necessary fields for EmailMessage
         subject = msg["subject"]
         sent_date = msg["date"]
-        body = msg.get_payload(decode=True).decode('utf-8', errors='ignore')
-        
+    # Ensure there's a payload to decode
+        payload = msg.get_payload(decode=True)
+        if payload:
+            body = payload.decode('utf-8', errors='ignore')
+        else:
+            body = ""        
         # Save email to the database
         EmailMessage.objects.create(
             account=self.account,

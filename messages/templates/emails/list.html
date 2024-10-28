@@ -1,4 +1,6 @@
 {% load static %}
+{% csrf_token %}  <!-- Add this line to include the CSRF token -->
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9,6 +11,8 @@
 </head>
 <body>
     <h1>Email List</h1>
+
+    <button id="start_email_import">Fetch Emails</button> <!-- Button to trigger email fetching -->
     
     <div>
         <progress id="progress-bar" value="0" max="100" style="width: 100%;"></progress>
@@ -39,10 +43,9 @@
         const emailSocket = new WebSocket('ws://' + window.location.host + '/ws/messages/');
 
         emailSocket.onopen = function() {
-            // The WebSocket is now open, you can safely send messages
-            fetchEmails(); // Call fetchEmails here to ensure it's sent after connection is open
+            console.log('WebSocket connection established');
         };
-    
+
         emailSocket.onmessage = function(e) {
             const data = JSON.parse(e.data);
             if (data.progress) {
@@ -54,7 +57,7 @@
                 updateEmailTable(data.new_email);
             }
         };
-    
+
         function updateEmailTable(email) {
             const table = document.getElementById('email-list');
             const row = table.insertRow();
@@ -63,18 +66,36 @@
             row.insertCell(2).innerText = email.from;
             row.insertCell(3).innerText = email.description;
         }
-    
+
+        // Function to fetch emails
         function fetchEmails() {
-            if (emailSocket.readyState === WebSocket.OPEN) {
-                emailSocket.send(JSON.stringify({
-                    'action': 'fetch_emails',
-                    'email_account_id': 1  // Replace with the actual account ID
-                }));
-            } else {
-                console.error("WebSocket is not open. Current state: " + emailSocket.readyState);
-            }
+            const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value; // Get CSRF token
+        
+            fetch('/emails/import/1/', {
+                method: 'POST', // Use POST method
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken // Include CSRF token in the headers
+                },
+                body: JSON.stringify({ /* any necessary data, e.g., account ID */ })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log(data);
+                // Optionally handle the response, e.g., update UI or notify the user
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+            });
         }
-    
+
+        // Attach the fetchEmails function to the button click
+        document.getElementById('start_email_import').addEventListener('click', fetchEmails);
     </script>
 </body>
 </html>

@@ -37,13 +37,19 @@ def start_email_import(request, account_id):
     Initiates the email fetch process for the specified account.
     """
     try:
+        print('before account')
         account = EmailAccount.objects.get(id=account_id)
+        print('after account', account)
         fetcher = EmailFetcher(account)
+        print('after fetcher', fetcher)
+        print("Starting email fetch...")
         if fetcher.login():
-            # Start fetching emails in the background or via a WebSocket message
-            fetch_emails_view(request)  # You could refactor to call a task instead
+            # Start fetching emails in the background or via WebSocket
+            fetcher.fetch_messages()  # Call the fetching directly
             return JsonResponse({"status": "success"})
         else:
             return JsonResponse({"status": "error", "message": "Login failed"})
     except EmailAccount.DoesNotExist:
         return JsonResponse({"status": "error", "message": "Account not found"})
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": str(e)})
