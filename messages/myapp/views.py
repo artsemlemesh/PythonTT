@@ -2,6 +2,26 @@ from django.shortcuts import render
 from django.http import JsonResponse
 from .models import EmailMessage, EmailAccount
 from .services import EmailFetcher
+from .email_client import EmailClient
+from django.views.decorators.http import require_POST
+
+
+
+def fetch_emails_view(request):
+    email_account = EmailAccount.objects.get(id=1)  # Replace with dynamic selection
+    client = EmailClient(
+        email_service=email_account.provider,
+        username=email_account.username,
+        password=email_account.password,
+    )
+
+    if client.connect():
+        emails = client.fetch_emails()  # Fetch real emails
+        client.logout()  # Logout after fetching
+        return render(request, "emails/list.html", {"emails": emails})  # Pass fetched emails to the template
+    else:
+        return render(request, "emails/list.html", {"emails": [], "error": "Failed to connect to email server."})
+
 
 def email_list_view(request):
     """
@@ -10,6 +30,8 @@ def email_list_view(request):
     emails = EmailMessage.objects.all()
     return render(request, 'emails/list.html', {'emails': emails})
 
+
+@require_POST
 def start_email_import(request, account_id):
     """
     Initiates the email fetch process for the specified account.
@@ -18,7 +40,8 @@ def start_email_import(request, account_id):
         account = EmailAccount.objects.get(id=account_id)
         fetcher = EmailFetcher(account)
         if fetcher.login():
-            fetcher.fetch_messages()
+            # Start fetching emails in the background or via a WebSocket message
+            fetch_emails_view(request)  # You could refactor to call a task instead
             return JsonResponse({"status": "success"})
         else:
             return JsonResponse({"status": "error", "message": "Login failed"})

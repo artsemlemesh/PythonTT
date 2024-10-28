@@ -8,71 +8,73 @@
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
 <body>
-    <h1>Email Messages</h1>
-
-    <button id="start-import">Start Import</button>
+    <h1>Email List</h1>
     
-    <div id="progress-container">
-        <label>Progress: <span id="progress-text">Reading Messages</span></label>
-        <div id="progress-bar">
-            <div id="progress-fill"></div>
-        </div>
+    <div>
+        <progress id="progress-bar" value="0" max="100" style="width: 100%;"></progress>
+        <span id="status-text">Ready to fetch emails.</span>
     </div>
-
-    <table id="email-table">
+    <table>
         <thead>
             <tr>
-                <th>ID</th>
                 <th>Subject</th>
-                <th>Sent Date</th>
-                <th>Received Date</th>
-                <th>Body (Preview)</th>
-                <th>Attachments</th>
+                <th>Date Sent</th>
+                <th>From</th>
+                <th>Description</th>
             </tr>
         </thead>
-        <tbody>
+        <tbody id="email-list">
             {% for email in emails %}
             <tr>
-                <td>{{ email.id }}</td>
                 <td>{{ email.subject }}</td>
-                <td>{{ email.sent_date }}</td>
-                <td>{{ email.received_date }}</td>
-                <td>{{ email.body|truncatechars:50 }}</td>
-                <td>
-                    {% if email.attachments %}
-                        {{ email.attachments|join:", " }}
-                    {% else %}
-                        None
-                    {% endif %}
-                </td>
+                <td>{{ email.date_sent }}</td>
+                <td>{{ email.from }}</td>
+                <td>{{ email.description }}</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 
     <script>
-        document.getElementById("start-import").onclick = function () {
-            fetch('/emails/import/1/')  // Specify the correct account ID here
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === "success") {
-                        console.log("Import started.");
-                    } else {
-                        alert(data.message || "Error starting import.");
-                    }
-                });
+        const emailSocket = new WebSocket('ws://' + window.location.host + '/ws/messages/');
+
+        emailSocket.onopen = function() {
+            // The WebSocket is now open, you can safely send messages
+            fetchEmails(); // Call fetchEmails here to ensure it's sent after connection is open
         };
-
-        const progressText = document.getElementById("progress-text");
-        const progressBar = document.getElementById("progress-fill");
-
-        const socket = new WebSocket('ws://' + window.location.host + '/ws/email_progress/');
-
-        socket.onmessage = function (event) {
-            const data = JSON.parse(event.data);
-            progressBar.style.width = `${data.progress}%`;
-            progressText.innerText = data.progress >= 100 ? "Emails Loaded" : "Loading...";
+    
+        emailSocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            if (data.progress) {
+                document.getElementById('progress-bar').value = data.progress; // Update progress bar
+                document.getElementById('status-text').innerText = `Checked emails: ${data.checked_count}`;
+            }
+            if (data.new_email) {
+                // Update email table with new emails
+                updateEmailTable(data.new_email);
+            }
         };
+    
+        function updateEmailTable(email) {
+            const table = document.getElementById('email-list');
+            const row = table.insertRow();
+            row.insertCell(0).innerText = email.subject;
+            row.insertCell(1).innerText = email.date_sent;
+            row.insertCell(2).innerText = email.from;
+            row.insertCell(3).innerText = email.description;
+        }
+    
+        function fetchEmails() {
+            if (emailSocket.readyState === WebSocket.OPEN) {
+                emailSocket.send(JSON.stringify({
+                    'action': 'fetch_emails',
+                    'email_account_id': 1  // Replace with the actual account ID
+                }));
+            } else {
+                console.error("WebSocket is not open. Current state: " + emailSocket.readyState);
+            }
+        }
+    
     </script>
 </body>
 </html>
