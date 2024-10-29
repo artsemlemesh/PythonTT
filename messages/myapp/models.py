@@ -10,8 +10,8 @@ class EmailAccount(models.Model):
 class EmailMessage(models.Model):
     account = models.ForeignKey(EmailAccount, null=True, on_delete=models.CASCADE)
     subject = models.CharField(max_length=255)
-    sent_date = models.DateTimeField()
-    received_date = models.DateTimeField()
+    sent_date = models.DateTimeField(null=True, blank=True)
+    received_date = models.DateTimeField(null=True, blank=True)
     body = models.TextField()
     attachments = models.JSONField(default=list) 
     

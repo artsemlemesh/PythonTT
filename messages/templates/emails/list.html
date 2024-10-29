@@ -21,19 +21,21 @@
     <table>
         <thead>
             <tr>
-                <th>Subject</th>
-                <th>Date Sent</th>
-                <th>From</th>
-                <th>Description</th>
+                <th>Account</th>
+                {% comment %} <th>Subject</th> {% endcomment %}
+                <th>Sent date</th>
+                {% comment %} <th>Received date</th> {% endcomment %}
+                <th>Body</th>
             </tr>
         </thead>
         <tbody id="email-list">
             {% for email in emails %}
             <tr>
-                <td>{{ email.subject }}</td>
-                <td>{{ email.date_sent }}</td>
-                <td>{{ email.from }}</td>
-                <td>{{ email.description }}</td>
+                <td>{{ email.account }}</td>
+                {% comment %} <td>{{ email.subject }}</td> {% endcomment %}
+                <td>{{ email.sent_date }}</td>
+                {% comment %} <td>{{ email.received_date }}</td> {% endcomment %}
+                <td>{{ email.body }}</td>
             </tr>
             {% endfor %}
         </tbody>
