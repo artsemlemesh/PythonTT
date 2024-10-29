@@ -5,10 +5,24 @@ import email
 import imaplib
 class EmailProgressConsumer(AsyncWebsocketConsumer):
     async def connect(self):
+        await self.channel_layer.group_add("email_updates", self.channel_name)
         await self.accept()
+        print(f"WebSocket connection established: {self.channel_name}")
 
     async def disconnect(self, close_code):
-        pass
+        await self.channel_layer.group_discard("email_updates", self.channel_name)
+
+    # async def send_progress(self, progress, checked_count):
+    #     await self.send(text_data=json.dumps({
+    #         'progress': progress,
+    #         'checked_count': checked_count
+    #     }))
+
+    # async def send_new_email(self, email):
+    #     print("Sending new email:", email)
+    #     await self.send(text_data=json.dumps({
+    #         'new_email': email
+    #     }))
 
     async def receive(self, text_data):
         data = json.loads(text_data)
@@ -31,6 +45,7 @@ class EmailProgressConsumer(AsyncWebsocketConsumer):
             # Search for all emails
             result, data = mail.search(None, 'ALL')
             email_ids = data[0].split()
+            print(f"Total emails to process: {len(email_ids)}")
 
             total_emails = len(email_ids)
 
@@ -47,10 +62,10 @@ class EmailProgressConsumer(AsyncWebsocketConsumer):
 
                 # Calculate progress
                 progress = ((i + 1) / total_emails) * 100
-
+                print(f"Progress: {progress:.2f}%")
                 await self.send(text_data=json.dumps({
                     'progress': progress,
-                    'checked_count': i + 1,
+                    # 'checked_count': i + 1,
                     'new_email': {
                         'subject': subject,
                         'date_sent': date_sent,

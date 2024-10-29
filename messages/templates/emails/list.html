@@ -22,9 +22,9 @@
         <thead>
             <tr>
                 <th>Account</th>
-                {% comment %} <th>Subject</th> {% endcomment %}
-                <th>Sent date</th>
-                {% comment %} <th>Received date</th> {% endcomment %}
+                <th>Subject</th> <!-- Uncommented to display the subject -->
+                <th>Sent Date</th>
+                <th>Received Date</th> <!-- Added to display received date -->
                 <th>Body</th>
             </tr>
         </thead>
@@ -32,9 +32,9 @@
             {% for email in emails %}
             <tr>
                 <td>{{ email.account }}</td>
-                {% comment %} <td>{{ email.subject }}</td> {% endcomment %}
+                <td>{{ email.subject }}</td> <!-- Added subject field -->
                 <td>{{ email.sent_date }}</td>
-                {% comment %} <td>{{ email.received_date }}</td> {% endcomment %}
+                <td>{{ email.received_date }}</td> <!-- Added received date field -->
                 <td>{{ email.body }}</td>
             </tr>
             {% endfor %}
@@ -43,38 +43,46 @@
 
     <script>
         const emailSocket = new WebSocket('ws://' + window.location.host + '/ws/messages/');
-
+    
         emailSocket.onopen = function() {
             console.log('WebSocket connection established');
         };
-
+    
         emailSocket.onmessage = function(e) {
             const data = JSON.parse(e.data);
-            if (data.progress) {
+            console.log('Received data from WebSocket:', data); // Log received data for debugging
+    
+            if (data.progress !== undefined) {
+                console.log(`Progress: ${data.progress}%`);
+
                 document.getElementById('progress-bar').value = data.progress; // Update progress bar
                 document.getElementById('status-text').innerText = `Checked emails: ${data.checked_count}`;
             }
+            
             if (data.new_email) {
-                // Update email table with new emails
+                // Ensure new_email is in the expected format
+                console.log('New email received:', data.new_email);
                 updateEmailTable(data.new_email);
             }
         };
-
+    
         function updateEmailTable(email) {
             const table = document.getElementById('email-list');
             const row = table.insertRow();
-            row.insertCell(0).innerText = email.subject;
-            row.insertCell(1).innerText = email.date_sent;
-            row.insertCell(2).innerText = email.from;
-            row.insertCell(3).innerText = email.description;
+            row.insertCell(0).innerText = email.from || 'Unknown';  // Use 'Unknown' if from is undefined
+            row.insertCell(1).innerText = email.subject || 'No subject';  // Use 'No subject' if subject is undefined
+            row.insertCell(2).innerText = email.date_sent || 'Unknown';  // Use 'Unknown' if date_sent is undefined
+            row.insertCell(3).innerText = email.received_date || 'Unknown'; // Use 'Unknown' if received_date is undefined
+            row.insertCell(4).innerText = email.description || 'No content';  // Use 'No content' if description is undefined
         }
-
+    
         // Function to fetch emails
         function fetchEmails() {
             const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value; // Get CSRF token
-        
+            
+            console.log('Fetching emails...'); // Log fetch initiation
             fetch('/emails/import/1/', {
-                method: 'POST', // Use POST method
+                method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrftoken // Include CSRF token in the headers
@@ -88,14 +96,13 @@
                 return response.json();
             })
             .then(data => {
-                console.log(data);
-                // Optionally handle the response, e.g., update UI or notify the user
+                console.log('Email fetch response:', data); // Log fetch response
             })
             .catch((error) => {
                 console.error('Error:', error);
             });
         }
-
+    
         // Attach the fetchEmails function to the button click
         document.getElementById('start_email_import').addEventListener('click', fetchEmails);
     </script>
