@@ -7,7 +7,7 @@ class EmailProgressConsumer(AsyncWebsocketConsumer):
         await self.accept()
         print(f"WebSocket connection established: {self.channel_name}")
 
-    async def disconnect(self):
+    async def disconnect(self, close_code):
         await self.channel_layer.group_discard("email_updates", self.channel_name)
 
     async def send_progress(self, event):

@@ -1,5 +1,5 @@
 {% load static %}
-{% csrf_token %}  <!-- Add this line to include the CSRF token -->
+{% csrf_token %} 
 
 <!DOCTYPE html>
 <html lang="en">
@@ -16,7 +16,7 @@
         <input type="email" id="email" required placeholder="Enter your email">
         
         <label for="password">Password:</label>
-        <input type="password" id="password" required placeholder="Enter your password">
+        <input type="password" id="password" required placeholder="Your APP! password:">
         
     </div>
     <button id="start_email_import">Fetch Emails</button> <!-- Button to trigger email fetching -->
@@ -29,9 +29,9 @@
         <thead>
             <tr>
                 <th>Account</th>
-                <th>Subject</th> <!-- Uncommented to display the subject -->
+                <th>Subject</th>
                 <th>Sent Date</th>
-                <th>Received Date</th> <!-- Added to display received date -->
+                <th>Received Date</th>
                 <th>Body</th>
                 <th>Attachments</th>
             </tr>
@@ -40,11 +40,11 @@
             {% for email in emails %}
             <tr>
                 <td>{{ email.account.email }}</td>
-                <td>{{ email.subject | truncatechars:20 }}</td> <!-- Added subject field -->
-                <td>{{ email.sent_date|date:"F j, Y, g:i a" }}</td>  <!-- Custom format for sent_date -->
-                <td>{{ email.received_date|date:"F j, Y, g:i a" }}</td>  <!-- Custom format for received_date -->
+                <td>{{ email.subject | truncatechars:20 }}</td> 
+                <td>{{ email.sent_date|date:"F j, Y, g:i a" }}</td>  
+                <td>{{ email.received_date|date:"F j, Y, g:i a" }}</td> 
                 <td>{{ email.body | truncatechars:30 }}</td>
-                <td>{{ email.attachments }}</td>
+                <td>{% if email.attachments %}{{ email.attachments }}{% else %}No attachments{% endif %}</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -60,48 +60,50 @@
     
         emailSocket.onmessage = function(e) {
             const data = JSON.parse(e.data);
-            console.log('Received data from WebSocket:', data); // Log received data for debugging
             console.log('Progress my console:', data.progress);
             if (data.progress !== undefined) {
                 console.log(`Progress: ${data.progress}%`);
 
                 document.getElementById('progress-bar').value = data.progress; // Update progress bar
                 document.getElementById('status-text').innerText = `Checked emails: ${data.checked_count}`;
+            
+                if (data.progress === 100) {
+                    console.log("Email fetching completed. Refreshing the page...");
+                    location.reload(); // Refresh the page when fetching is complete
+                }
             }
             
             if (data.new_email) {
-                // Ensure new_email is in the expected format
                 console.log('New email received:', data.new_email);
                 updateEmailTable(data.new_email);
             }
         };
     
         function updateEmailTable(email) {
-            console.log('emailAAAA', email)
             const table = document.getElementById('email-list');
             const row = table.insertRow();
-            row.insertCell(0).innerText = email.from || 'Unknown';  // Use 'Unknown' if from is undefined
-            row.insertCell(1).innerText = email.subject || 'No subject';  // Use 'No subject' if subject is undefined
-            row.insertCell(2).innerText = email.date_sent || 'Unknown';  // Use 'Unknown' if date_sent is undefined
-            row.insertCell(3).innerText = email.received_date || 'Unknown'; // Use 'Unknown' if received_date is undefined
-            row.insertCell(4).innerText = email.description || 'No content';  // Use 'No content' if description is undefined
-            row.insertCell(5).innerText = email.attachments || 'No content';  // Use 'No content' if description is undefined
+            row.insertCell(0).innerText = email.from || 'Unknown';
+            row.insertCell(1).innerText = email.subject || 'No subject';  
+            row.insertCell(2).innerText = email.date_sent || 'Unknown'; 
+            row.insertCell(3).innerText = email.received_date || 'Unknown';
+            row.insertCell(4).innerText = email.description || 'No content';  
+            row.insertCell(5).innerText = email.attachments && email.attachments.length > 0 ? email.attachments : 'No attachments';
         }
     
         // Function to fetch emails
         function fetchEmails() {
             accountID=1
-            const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value; // Get CSRF token
-            const email = document.getElementById('email').value; // Get email input
-            const password = document.getElementById('password').value; // Get password input
-            console.log('Fetching emails...'); // Log fetch initiation
+            const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value; 
+            const email = document.getElementById('email').value; 
+            const password = document.getElementById('password').value; 
+            console.log('Fetching emails...'); 
             fetch(`/emails/import/${accountID}/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': csrftoken // Include CSRF token in the headers
+                    'X-CSRFToken': csrftoken 
                 },
-                body: JSON.stringify({ email: email, password: password }) // Send email and password in the request body
+                body: JSON.stringify({ email: email, password: password }) 
             })
             .then(response => {
                 if (!response.ok) {
@@ -110,14 +112,13 @@
                 return response.json();
             })
             .then(data => {
-                console.log('Email fetch response:', data); // Log fetch response
+                console.log('Email fetch response:', data); 
             })
             .catch((error) => {
                 console.error('Error:', error);
             });
         }
     
-        // Attach the fetchEmails function to the button click
         document.getElementById('start_email_import').addEventListener('click', fetchEmails);
     </script>
 </body>

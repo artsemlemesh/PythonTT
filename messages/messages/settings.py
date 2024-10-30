@@ -78,6 +78,7 @@ CHANNEL_LAYERS = {
     },
 }
 
+#didnt use
 EMAIL_SERVICES = {
     'yandex': {
         'IMAP_SERVER': 'imap.yandex.com',
