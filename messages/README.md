@@ -27,9 +27,12 @@ For convenience, the application has the following limitations:
 1. **Clone the Repository**: 
    Clone your project repository to your local machine.
    
+   
    ```bash
    git clone <your-repository-url>
    cd <your-project-directory>
+   python -m venv venv
+   source venv/bin/activate
    ```
 
 2. **Install Dependencies**:
@@ -37,6 +40,7 @@ For convenience, the application has the following limitations:
    
    ```bash
    pip install -r requirements.txt
+
    ```
 
 3. **Redis Setup**:
