@@ -26,16 +26,18 @@
                 <th>Sent Date</th>
                 <th>Received Date</th> <!-- Added to display received date -->
                 <th>Body</th>
+                <th>Attachments</th>
             </tr>
         </thead>
         <tbody id="email-list">
             {% for email in emails %}
             <tr>
                 <td>{{ email.account }}</td>
-                <td>{{ email.subject }}</td> <!-- Added subject field -->
-                <td>{{ email.sent_date }}</td>
-                <td>{{ email.received_date }}</td> <!-- Added received date field -->
-                <td>{{ email.body }}</td>
+                <td>{{ email.subject | truncatechars:20 }}</td> <!-- Added subject field -->
+                <td>{{ email.sent_date|date:"F j, Y, g:i a" }}</td>  <!-- Custom format for sent_date -->
+                <td>{{ email.received_date|date:"F j, Y, g:i a" }}</td>  <!-- Custom format for received_date -->
+                <td>{{ email.body | truncatechars:30 }}</td>
+                <td>{{ email.attachments }}</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -75,6 +77,7 @@
             row.insertCell(2).innerText = email.date_sent || 'Unknown';  // Use 'Unknown' if date_sent is undefined
             row.insertCell(3).innerText = email.received_date || 'Unknown'; // Use 'Unknown' if received_date is undefined
             row.insertCell(4).innerText = email.description || 'No content';  // Use 'No content' if description is undefined
+            row.insertCell(5).innerText = email.attachments || 'No content';  // Use 'No content' if description is undefined
         }
     
         // Function to fetch emails

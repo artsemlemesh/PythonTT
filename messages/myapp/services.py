@@ -7,7 +7,8 @@ from dateutil import parser
 import time
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
-
+from django.conf import settings
+import os
 
 class EmailFetcher:
     def __init__(self, account):
@@ -51,10 +52,31 @@ class EmailFetcher:
 
         # Process email content and handle multipart
             content = ""
+            attachments = []
+            attachments_dir = os.path.join(settings.MEDIA_ROOT, 'attachments')
+
+            # Ensure the 'attachments' directory exists
+            if not os.path.exists(attachments_dir):
+                os.makedirs(attachments_dir)
+
             if msg.is_multipart():
                 for part in msg.walk():
                     content_type = part.get_content_type()
                     content_disposition = str(part.get("Content-Disposition"))
+
+                    # Save attachment if it’s not inline
+                    if "attachment" in content_disposition:
+                        filename = part.get_filename()
+                        if filename:
+                            # Decode filename if encoded
+                            filename = self.decode_subject(filename)
+                            file_data = part.get_payload(decode=True)
+
+                            # Save to Django storage (e.g., to media folder)
+                            file_path = os.path.join(attachments_dir, filename)
+                            with open(file_path, 'wb') as f:
+                                f.write(file_data)
+                            attachments.append(file_path)
                     
                     if content_type == "text/plain" and "attachment" not in content_disposition:
                         payload = part.get_payload(decode=True)
@@ -66,13 +88,14 @@ class EmailFetcher:
                     content = payload.decode('utf-8', errors='ignore')
             
             # Save the email details
-            saved_count += self.save_email(msg, parsed_date, content, index + 1, total_messages)
+            saved_count += self.save_email(msg, parsed_date, content, index + 1, total_messages, attachments)
             # time.sleep(1)
         print(f"Successfully saved {saved_count} messages.")  # Log the number of saved messages
     
     
-    def save_email(self, msg, parsed_date, content, current_index, total_messages):
-        subject = msg.get("Subject", "No Subject")
+    def save_email(self, msg, parsed_date, content, current_index, total_messages, attachments=[]):
+        raw_subject = msg.get("Subject", "No Subject")
+        subject = self.decode_subject(raw_subject)
         from_ = msg.get("From", "Unknown Sender")
         
         account, created = EmailAccount.objects.get_or_create(email=from_)
@@ -85,7 +108,7 @@ class EmailFetcher:
             sent_date=parsed_date,
             received_date=parsed_date,
             body=limited_content,
-            attachments=[]
+            attachments=attachments
         )
         email_message.save()
 
@@ -114,22 +137,37 @@ class EmailFetcher:
             'new_email': message
         })
 
-    
-    def decode_header(self, header):
-        """
-        Decode an email header into a string.
-        """
-        decoded_parts = decode_header(header)
-        decoded_string = ""
+
+    def decode_subject(self, raw_subject):
+        """Decode the MIME-encoded email subject line into a readable format."""
+        decoded_parts = decode_header(raw_subject)
+        subject = ''
         
         for part, encoding in decoded_parts:
-            if isinstance(part, bytes):  # Only decode bytes
-                # Decode the bytes using the specified encoding, default to 'utf-8'
-                decoded_string += part.decode(encoding or 'utf-8', errors='ignore')
+            if isinstance(part, bytes):
+                # Decode using the specified encoding or default to 'utf-8'
+                subject += part.decode(encoding or 'utf-8', errors='ignore')
             else:
-                decoded_string += part  # If it's already a string, just add it
+                subject += part
         
-        return decoded_string
+        return subject
+
+    #not using at the moment
+    # def decode_header(self, header):
+    #     """
+    #     Decode an email header into a string.
+    #     """
+    #     decoded_parts = decode_header(header)
+    #     decoded_string = ""
+        
+    #     for part, encoding in decoded_parts:
+    #         if isinstance(part, bytes):  # Only decode bytes
+    #             # Decode the bytes using the specified encoding, default to 'utf-8'
+    #             decoded_string += part.decode(encoding or 'utf-8', errors='ignore')
+    #         else:
+    #             decoded_string += part  # If it's already a string, just add it
+        
+    #     return decoded_string
     
     def limit_content(self, content, word_limit):
         words = content.split()
