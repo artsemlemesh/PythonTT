@@ -1,31 +1,41 @@
 import imaplib
 import email
 from .models import EmailMessage, EmailAccount
-from datetime import datetime
 from email.header import decode_header
 from dateutil import parser
-import time
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from django.conf import settings
 import os
 import re
-from bs4 import BeautifulSoup  # You may need to install this
+from bs4 import BeautifulSoup  
 
 class EmailFetcher:
-    def __init__(self, account):
-        self.account = account
+    def __init__(self, email, password):
+        self.email = email
+        self.password = password
         self.mail = imaplib.IMAP4_SSL("imap.gmail.com")  # Configure server as per email provider
     
+
     def login(self):
         print("Logging in...")
         try:
-            self.mail.login('bublikteam1@gmail.com', 'bzdy wyke ygzy uygm')
+            self.mail.login(self.email, self.password)  # Use provided email and password
             print("Login successful!")
             return True
         except imaplib.IMAP4.error as e:
-            print("Login failed! Error: {e}")
+            print(f"Login failed! Error: {e}")  # Corrected string formatting
             return False
+
+    # def login(self):
+    #     print("Logging in...")
+    #     try:
+    #         self.mail.login('bublikteam1@gmail.com', 'bzdy wyke ygzy uygm')
+    #         print("Login successful!")
+    #         return True
+    #     except imaplib.IMAP4.error as e:
+    #         print("Login failed! Error: {e}")
+    #         return False
     
     def fetch_messages(self):
         print("Fetching messages...")
@@ -45,13 +55,7 @@ class EmailFetcher:
             raw_date = msg.get("Date")
             parsed_date = parser.parse(raw_date) if raw_date else None
         
-            # if raw_date:
-            #     try:
-            #         parsed_date = parser.parse(raw_date)
-            #     except Exception as e:
-            #         print(f"Could not parse date: {raw_date} - Error: {e}")
-            #         parsed_date = None
-
+           
           
         # Process email content and handle multipart
             content = ""
@@ -104,7 +108,6 @@ class EmailFetcher:
             
             # Save the email details
             saved_count += self.save_email(msg, parsed_date, content, index + 1, total_messages, attachments)
-            # time.sleep(1)
         print(f"Successfully saved {saved_count} messages.")  # Log the number of saved messages
     
     
@@ -157,14 +160,12 @@ class EmailFetcher:
 
     def extract_email_address(self, from_str):
         """Extracts the email address from the 'From' field."""
-        # Regular expression to extract email from the string
         match = re.search(r'<(.+?)>', from_str)
         if match:
             return match.group(1)  # Return the email address inside the angle brackets
         return from_str  # Return the original string if no email address is found
 
     def clean_content(content):
-        # Use regex to remove unwanted characters
         cleaned = re.sub(r'[^a-zA-Z0-9\s,.!?;:\'\"]', '', content)  # Adjust as necessary
         return cleaned.strip()  # Remove leading and trailing whitespace
 
@@ -182,22 +183,7 @@ class EmailFetcher:
         
         return subject
 
-    #not using at the moment
-    # def decode_header(self, header):
-    #     """
-    #     Decode an email header into a string.
-    #     """
-    #     decoded_parts = decode_header(header)
-    #     decoded_string = ""
-        
-    #     for part, encoding in decoded_parts:
-    #         if isinstance(part, bytes):  # Only decode bytes
-    #             # Decode the bytes using the specified encoding, default to 'utf-8'
-    #             decoded_string += part.decode(encoding or 'utf-8', errors='ignore')
-    #         else:
-    #             decoded_string += part  # If it's already a string, just add it
-        
-    #     return decoded_string
+
     
     def limit_content(self, content, word_limit):
         words = content.split()
