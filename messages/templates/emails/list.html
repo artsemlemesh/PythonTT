@@ -51,7 +51,7 @@
         emailSocket.onmessage = function(e) {
             const data = JSON.parse(e.data);
             console.log('Received data from WebSocket:', data); // Log received data for debugging
-    
+            console.log('Progress my console:', data.progress);
             if (data.progress !== undefined) {
                 console.log(`Progress: ${data.progress}%`);
 
@@ -67,6 +67,7 @@
         };
     
         function updateEmailTable(email) {
+            console.log('emailAAAA', email)
             const table = document.getElementById('email-list');
             const row = table.insertRow();
             row.insertCell(0).innerText = email.from || 'Unknown';  // Use 'Unknown' if from is undefined

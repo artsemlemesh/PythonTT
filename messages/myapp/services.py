@@ -38,7 +38,6 @@ class EmailFetcher:
         for index, num in enumerate(last_10_nums):
             result, msg_data = self.mail.fetch(num, "(RFC822)")
             msg = email.message_from_bytes(msg_data[0][1])
-        
         # Parse the date
             raw_date = msg.get("Date")
             parsed_date = parser.parse(raw_date) if raw_date else None
@@ -97,17 +96,13 @@ class EmailFetcher:
 
     def notify_progress(self, current_index, total_messages, email_message):
         progress_percentage = (current_index / total_messages) * 100
-        print(f"Progress: {progress_percentage:.2f}%")
         message = {
-            "progress": progress_percentage,
-            "new_email": {
-                "subject": email_message.subject,
-                "date_sent": email_message.sent_date.isoformat() if email_message.sent_date else "Unknown",
-                "from": email_message.account.email,
-                "description": email_message.body,
-                "received_date": email_message.received_date.isoformat() if email_message.received_date else "Unknown",  # Added if needed
-                "attachments": email_message.attachments  # If you want to include attachments
-            }
+            "subject": email_message.subject,
+            "date_sent": email_message.sent_date.isoformat() if email_message.sent_date else "Unknown",
+            "from": email_message.account.email,
+            "description": email_message.body,
+            "received_date": email_message.received_date.isoformat() if email_message.received_date else "Unknown",
+            "attachments": email_message.attachments
         }
 
     # Send to WebSocket
@@ -115,7 +110,8 @@ class EmailFetcher:
         async_to_sync(channel_layer.group_send)('email_updates', {
             'type': 'send_progress',
             'progress': progress_percentage,
-            'new_email': message['new_email']
+            'checked_count': current_index,
+            'new_email': message
         })
 
     
