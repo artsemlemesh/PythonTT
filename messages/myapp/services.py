@@ -9,6 +9,8 @@ from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from django.conf import settings
 import os
+import re
+from bs4 import BeautifulSoup  # You may need to install this
 
 class EmailFetcher:
     def __init__(self, account):
@@ -50,6 +52,7 @@ class EmailFetcher:
             #         print(f"Could not parse date: {raw_date} - Error: {e}")
             #         parsed_date = None
 
+          
         # Process email content and handle multipart
             content = ""
             attachments = []
@@ -77,11 +80,23 @@ class EmailFetcher:
                             with open(file_path, 'wb') as f:
                                 f.write(file_data)
                             attachments.append(file_path)
-                    
-                    if content_type == "text/plain" and "attachment" not in content_disposition:
+                    elif content_type == "text/plain":
+                        # Get the text content
                         payload = part.get_payload(decode=True)
                         if payload:
                             content += payload.decode('utf-8', errors='ignore')
+                    elif content_type == "text/html":
+                        # Handle HTML content, strip HTML tags if needed
+                        payload = part.get_payload(decode=True)
+                        if payload:
+                            # Parse HTML and extract text
+                            soup = BeautifulSoup(payload, 'html.parser')
+                            for a in soup.find_all('a'):
+                                a.decompose()  # Remove the link
+                            for img in soup.find_all('img'):
+                                img.decompose()  # Remove the image
+                            content += soup.get_text(strip=True)  # Get plain text from HTML
+
             else:
                 payload = msg.get_payload(decode=True)
                 if payload:
@@ -98,7 +113,10 @@ class EmailFetcher:
         subject = self.decode_subject(raw_subject)
         from_ = msg.get("From", "Unknown Sender")
         
-        account, created = EmailAccount.objects.get_or_create(email=from_)
+        # Extract email address from the 'From' field
+        email_address = self.extract_email_address(from_)
+
+        account, created = EmailAccount.objects.get_or_create(email=email_address)
         limited_content = self.limit_content(content, 5)
 
         # Create and save the EmailMessage instance
@@ -137,6 +155,18 @@ class EmailFetcher:
             'new_email': message
         })
 
+    def extract_email_address(self, from_str):
+        """Extracts the email address from the 'From' field."""
+        # Regular expression to extract email from the string
+        match = re.search(r'<(.+?)>', from_str)
+        if match:
+            return match.group(1)  # Return the email address inside the angle brackets
+        return from_str  # Return the original string if no email address is found
+
+    def clean_content(content):
+        # Use regex to remove unwanted characters
+        cleaned = re.sub(r'[^a-zA-Z0-9\s,.!?;:\'\"]', '', content)  # Adjust as necessary
+        return cleaned.strip()  # Remove leading and trailing whitespace
 
     def decode_subject(self, raw_subject):
         """Decode the MIME-encoded email subject line into a readable format."""

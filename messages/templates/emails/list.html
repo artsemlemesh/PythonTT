@@ -32,7 +32,7 @@
         <tbody id="email-list">
             {% for email in emails %}
             <tr>
-                <td>{{ email.account }}</td>
+                <td>{{ email.account.email }}</td>
                 <td>{{ email.subject | truncatechars:20 }}</td> <!-- Added subject field -->
                 <td>{{ email.sent_date|date:"F j, Y, g:i a" }}</td>  <!-- Custom format for sent_date -->
                 <td>{{ email.received_date|date:"F j, Y, g:i a" }}</td>  <!-- Custom format for received_date -->
